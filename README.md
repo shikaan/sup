@@ -6,7 +6,7 @@
 <h1 align="center">sup</h1>
 
 <p align="center">
-Installation scripts for any binary.
+One-liners to manage any binary.
 </p>
 
 ## ⚡️ Quick start
