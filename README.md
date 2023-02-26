@@ -11,13 +11,13 @@ Installation scripts for any binary.
 
 ## ⚡️ Quick start
 
-`sup` is a set of simple and useful shell scripts that can be used to make your development workflow more efficient. These scripts provide one-liners that can be used to install or perform other common tasks on your binaries, and can easily be incorporated into your project's README.
+_sup_ is a set of simple and useful shell scripts that can be used to make your development workflow more efficient. These scripts provide one-liners that can be used to install or perform other common tasks on your binaries, and can easily be incorporated into your project's README.
 
-`sup` works under the following assumptions binaries should be published as assets of a GitHub release and follow the naming convention "${BIN}-${OS}-${ARCH}" (e.g., "keydex-linux-amd64").
+_sup_ works under the following assumptions: binaries are published as [GitHub Release Assets](https://docs.github.com/en/rest/releases/assets?apiVersion=2022-11-28) and follow the naming convention `${BIN}-${OS}-${ARCH}` (for example, `keydex-linux-amd64`).
 
 ### Install
 
-Executing the following command will install latest version of `mybin`
+Executing the following command will install latest version of `mybin` (for example, downloading `mybin-linux-amd64`)
 
 ```sh
 sudo sh -c "curl -s https://shikaan.github.io/sup/install | REPO=myuser/mybin sh -"
@@ -45,7 +45,7 @@ sudo sh -c "curl -s https://shikaan.github.io/sup/uninstall | REPO=myuser/myrepo
 
 ## 📝 Example
 
-Repositories using `sup` in their README (open a Pull Request and add yours):
+Repositories using _sup_ in their README (open a Pull Request and add yours):
 
  * [keydex](http://github.com/shikaan/keydex)
  * [shmux](http://github.com/shikaan/shmux)
