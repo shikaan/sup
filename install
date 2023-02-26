@@ -1,0 +1,63 @@
+#!/bin/env sh
+
+get_architecture () {
+  arch="$(uname -m)"
+
+  if [ "$arch" = "x86_64" ]; then
+    echo "amd64"
+  else
+    echo "$arch"
+  fi
+}
+
+get_os () {
+  uname | tr '[:upper:]' '[:lower:]'
+}
+
+print_usage () {
+  echo ""
+  echo "Usage: sudo REPO=org/repo BIN=name $0"
+}
+
+OS=$(get_os)
+ARCH=$(get_architecture)
+HAS_WGET=$(which wget)
+
+if [ "$(id -u)" -ne 0 ]; then 
+  echo "Installation needs to be run as super user."
+  print_usage
+  exit 1
+fi
+
+if [ -z "${REPO}" ]; then
+  echo "REPO should be in the form of 'organization/repo', got '${REPO}'." 
+  print_usage
+  exit 1
+fi
+
+if [ -z "${BIN}" ]; then
+  BIN=$(basename "${REPO}")
+fi
+
+  # where to install the binary
+DESTINATION="/usr/local/bin/${BIN}"
+# name of the hosted binary
+ARTIFACT_NAME="${BIN}-${OS}-${ARCH}"
+# complete URL where the binary is hosted
+URL="https://github.com/${REPO}/releases/latest/download/${ARTIFACT_NAME}"
+
+echo "Starting installation of ${BIN}"
+
+echo "> Downloading..."
+if [ -z "$HAS_WGET" ]; then
+  curl -sfLo "${DESTINATION}" "${URL}"
+else
+  wget -q -O "${DESTINATION}" "${URL}"
+fi
+
+echo "> Setting permissions..."
+chmod u+x "${DESTINATION}"
+chown "$(logname)" "${DESTINATION}"
+
+echo "Done!"
+

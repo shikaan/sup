@@ -1,0 +1,26 @@
+#!/bin/env sh
+
+print_usage () {
+  echo ""
+  echo "Usage: sudo REPO=org/repo BIN=name $0"
+}
+
+if [ "$(id -u)" -ne 0 ]; then 
+  echo "Uninstallation needs to be run as super user. Please run 'sudo $0' to proceed."
+  exit 1
+fi
+
+if [ -z "${REPO}" ]; then
+  echo "REPO should be in the form of 'organization/repo', got '${REPO}'." 
+  print_usage
+  exit 1
+fi
+
+if [ -z "${BIN}" ]; then
+  BIN=$(basename "${REPO}")
+fi
+
+
+echo "Removing previous installation of ${BIN}"
+rm "/usr/local/bin/${BIN}"
+echo "Done!"
