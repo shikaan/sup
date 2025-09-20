@@ -61,7 +61,7 @@ chown "$(logname)" "${DESTINATION}"
 
 # install the manpage in the first section (user commands and tools)
 MAN_DESTINATION="/usr/local/share/man/man1/${BIN}.1"
-# consequently expect file name name to end with .1
+# consequently expect file name to end with .1
 MAN_ARTIFACT_NAME="${BIN}.1"
 # fetch the man from the same place as the binary
 MAN_URL="https://github.com/${REPO}/releases/latest/download/${MAN_ARTIFACT_NAME}"

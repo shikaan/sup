@@ -23,6 +23,6 @@ fi
 
 echo "Removing previous installation of ${BIN}"
 rm "/usr/local/bin/${BIN}"
-rm "/usr/local/share/man/man1/${BIN}.1"
+rm -f "/usr/local/share/man/man1/${BIN}.1"
 
 echo "Done!"
