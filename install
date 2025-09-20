@@ -1,4 +1,4 @@
-#!/bin/env sh
+#!/usr/bin/env sh
 
 get_architecture () {
   arch="$(uname -m)"
@@ -23,14 +23,14 @@ OS=$(get_os)
 ARCH=$(get_architecture)
 HAS_WGET=$(which wget)
 
-if [ "$(id -u)" -ne 0 ]; then 
+if [ "$(id -u)" -ne 0 ]; then
   echo "Installation needs to be run as super user."
   print_usage
   exit 1
 fi
 
 if [ -z "${REPO}" ]; then
-  echo "REPO should be in the form of 'organization/repo', got '${REPO}'." 
+  echo "REPO should be in the form of 'organization/repo', got '${REPO}'."
   print_usage
   exit 1
 fi
@@ -39,7 +39,7 @@ if [ -z "${BIN}" ]; then
   BIN=$(basename "${REPO}")
 fi
 
-  # where to install the binary
+# where to install the binary
 DESTINATION="/usr/local/bin/${BIN}"
 # name of the hosted binary
 ARTIFACT_NAME="${BIN}-${OS}-${ARCH}"
@@ -48,7 +48,7 @@ URL="https://github.com/${REPO}/releases/latest/download/${ARTIFACT_NAME}"
 
 echo "Starting installation of ${BIN}"
 
-echo "> Downloading..."
+echo "> Downloading binary ${ARTIFACT_NAME}..."
 if [ -z "$HAS_WGET" ]; then
   curl -sfLo "${DESTINATION}" "${URL}"
 else
@@ -59,5 +59,29 @@ echo "> Setting permissions..."
 chmod u+x "${DESTINATION}"
 chown "$(logname)" "${DESTINATION}"
 
-echo "Done!"
+# install the manpage in the first section (user commands and tools)
+MAN_DESTINATION="/usr/local/share/man/man1/${BIN}.1"
+# consequently expect file name name to end with .1
+MAN_ARTIFACT_NAME="${BIN}.1"
+# fetch the man from the same place as the binary
+MAN_URL="https://github.com/${REPO}/releases/latest/download/${MAN_ARTIFACT_NAME}"
 
+NO_MANPAGE=0
+if [ -z "$HAS_WGET" ]; then
+  curl -sfLI "${MAN_URL}" > /dev/null
+  NO_MANPAGE=$?
+else
+  wget --spider --max-redirect=20 -q "${MAN_URL}"
+  NO_MANPAGE=$?
+fi
+
+if [ "$NO_MANPAGE" -eq 0 ]; then
+  echo "> Downloading man page ${MAN_ARTIFACT_NAME}..."
+  if [ -z "$HAS_WGET" ]; then
+    curl -sfLo "${MAN_DESTINATION}" "${MAN_URL}"
+  else
+    wget -q -O "${MAN_DESTINATION}" "${MAN_URL}"
+  fi
+fi
+
+echo "Done!"
