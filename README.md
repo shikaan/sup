@@ -13,7 +13,9 @@ One-liners to manage any binary.
 
 _sup_ is a set of simple and useful shell scripts that can be used to make your development workflow more efficient. These scripts provide one-liners that can be used to install or perform other common tasks on your binaries, and can easily be incorporated into your project's README.
 
-_sup_ works under the following assumptions: binaries are published as [GitHub Release Assets](https://docs.github.com/en/rest/releases/assets?apiVersion=2022-11-28) and follow the naming convention `${BIN}-${OS}-${ARCH}` (for example, `keydex-linux-amd64`).
+_sup_ works under the following assumptions: binaries are published as [GitHub Release Assets](https://docs.github.com/en/rest/releases/assets?apiVersion=2022-11-28) and follow the naming convention `${BIN}-${OS}-${ARCH}` (for example, `keydex-linux-amd64`). 
+
+Optionally, programs can be accompained by a man page, whose naming convention follows manpage's `${BIN}.1`.
 
 ### Install
 
@@ -49,6 +51,7 @@ Repositories using _sup_ in their README (open a Pull Request and add yours):
 
  * [keydex](http://github.com/shikaan/keydex)
  * [shmux](http://github.com/shikaan/shmux)
+ * [lifp](https://github.com/shikaan/lifp)
 
 ## 🤓 Contributing
 
