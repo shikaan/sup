@@ -60,7 +60,7 @@ chmod u+x "${DESTINATION}"
 chown "$(logname)" "${DESTINATION}"
 
 # install the manpage in the first section (user commands and tools)
-MAN_DESTINATION="/usr/local/share/man/man1/${BIN}.1"
+MAN_DESTINATION="/usr/share/man/man1/${BIN}.1"
 # consequently expect file name to end with .1
 MAN_ARTIFACT_NAME="${BIN}.1"
 # fetch the man from the same place as the binary
