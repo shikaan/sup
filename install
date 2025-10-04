@@ -60,9 +60,10 @@ chmod u+x "${DESTINATION}"
 chown "$(logname)" "${DESTINATION}"
 
 # install the manpage in the first section (user commands and tools)
-MAN_DESTINATION="/usr/share/man/man1/${BIN}.1"
+MAN_ROOT="/usr/local/share/man/man1"
 # consequently expect file name to end with .1
 MAN_ARTIFACT_NAME="${BIN}.1"
+MAN_DESTINATION="${MAN_ROOT}/${MAN_ARTIFACT_NAME}"
 # fetch the man from the same place as the binary
 MAN_URL="https://github.com/${REPO}/releases/latest/download/${MAN_ARTIFACT_NAME}"
 
@@ -77,6 +78,7 @@ fi
 
 if [ "$NO_MANPAGE" -eq 0 ]; then
   echo "> Downloading man page ${MAN_ARTIFACT_NAME}..."
+  mkdir -p "$MAN_ROOT"
   if [ -z "$HAS_WGET" ]; then
     curl -sfLo "${MAN_DESTINATION}" "${MAN_URL}"
   else
