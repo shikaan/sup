@@ -1,13 +1,13 @@
 #!/usr/bin/env sh
 
-set -u
+set -e
 
 output="stdout"
 total=0
 failed=0
 
 SUDO=
-[ "$(id -u)" -ne 0 ] && SUDO=sudo
+[ "$(id -u)" -ne 0 ] && SUDO="sudo -E"
 
 spec() {
   local fn="$1"
