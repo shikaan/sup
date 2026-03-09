@@ -53,7 +53,7 @@ if [ -z "${BIN}" ]; then
 fi
 
 # where to install the binary
-DESTINATION="${BIN_ROOT}/${BIN}"
+BIN_DESTINATION="${BIN_ROOT}/${BIN}"
 # name of the hosted binary
 ARTIFACT_NAME="${BIN}-${OS}-${ARCH}"
 # complete URL where the binary is hosted
@@ -64,7 +64,8 @@ API_URL="https://api.github.com/repos/${REPO}/releases/latest"
 echo "Starting installation of ${BIN}"
 
 echo "  Downloading ${ARTIFACT_NAME}..."
-${DOWNLOAD_CMD} "${DESTINATION}" "${BIN_URL}"
+mkdir -p "$(dirname "${BIN_DESTINATION}")"
+${DOWNLOAD_CMD} "${BIN_DESTINATION}" "${BIN_URL}"
 echo "  Downloading ${ARTIFACT_NAME}... OK"
 
 echo "  Verifying integrity..."
@@ -77,9 +78,9 @@ DIGEST=$(${API_CMD} ${API_URL} | \
 
 HASH=""
 if command -v sha256sum >/dev/null 2>&1; then
-  HASH=$(sha256sum "${DESTINATION}" | awk '{print $1}')
+  HASH=$(sha256sum "${BIN_DESTINATION}" | awk '{print $1}')
 elif command -v shasum >/dev/null 2>&1; then
-  HASH=$(shasum -a 256 "${DESTINATION}" | awk '{print $1}')
+  HASH=$(shasum -a 256 "${BIN_DESTINATION}" | awk '{print $1}')
 else
   error "Neither sha256sum nor shasum found"
 fi
@@ -87,14 +88,13 @@ fi
 if [ "sha256:$HASH" = "$DIGEST" ]; then
   echo "  Verifying integrity... OK"
 else
-  rm ${DESTINATION}
+  rm -f -- "${BIN_DESTINATION}"
   error "Checksum mismatch. Please reach out at https://github.com/${REPO}/issues to get help"
 fi
 
 
 echo "  Setting permissions..."
-chmod u+x "${DESTINATION}"
-chown "$(logname)" "${DESTINATION}"
+chmod u+x "${BIN_DESTINATION}"
 echo "  Setting permissions... OK"
 
 # install the manpage in the first section (user commands and tools)
@@ -111,7 +111,7 @@ fi
 
 if [ "$NO_MANPAGE" -eq 0 ]; then
   echo "  Downloading man page ${MAN_ARTIFACT_NAME}..."
-  mkdir -p "$MAN_ROOT"
+  mkdir -p "$(dirname "${MAN_DESTINATION}")"
   ${DOWNLOAD_CMD} "${MAN_DESTINATION}" "${MAN_URL}"
   echo "  Downloading man page ${MAN_ARTIFACT_NAME}... OK"
 fi
