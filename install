@@ -1,38 +1,52 @@
 #!/usr/bin/env sh
 
-get_architecture () {
-  arch="$(uname -m)"
+set -e
 
-  if [ "$arch" = "x86_64" ]; then
-    echo "amd64"
-  else
-    echo "$arch"
-  fi
-}
+BIN_ROOT="$HOME/.local/bin"
+MAN_ROOT="$HOME/.local/share/man"
+MAN_SECTION="1"
 
-get_os () {
-  uname | tr '[:upper:]' '[:lower:]'
-}
-
-print_usage () {
-  echo ""
-  echo "Usage: sudo REPO=org/repo BIN=name $0"
-}
-
-OS=$(get_os)
-ARCH=$(get_architecture)
-HAS_WGET=$(which wget)
-
-if [ "$(id -u)" -ne 0 ]; then
-  echo "Installation needs to be run as super user."
-  print_usage
+error() {
+  echo $1 >&2
+  echo "" >&2
+  echo "Usage: REPO=owner/repo BIN=name $0" >&2
   exit 1
-fi
+}
 
 if [ -z "${REPO}" ]; then
-  echo "REPO should be in the form of 'organization/repo', got '${REPO}'."
-  print_usage
-  exit 1
+  error "REPO should be in the form of 'owner/repo'."
+fi
+
+RELEASE_URL="https://github.com/${REPO}/releases/latest"
+
+OS=""
+case "$(uname -s)" in
+    Darwin) OS="darwin" ;;
+    Linux) OS="linux" ;;
+    MINGW*|MSYS*|CYGWIN*) error "Windows is not supported by this script. You can download the .exe at ${RELEASE_URL}.";;
+    *) error "Unsupported operating system: $(uname -s). See ${RELEASE_URL} for supported platforms.";;
+esac
+
+ARCH=""
+case "$(uname -m)" in
+    x86_64|amd64) ARCH="amd64" ;;
+    arm64|aarch64) ARCH="arm64" ;;
+    *) error "Unsupported architecture: $(uname -m). See ${RELEASE_URL} for supported platforms.";;
+esac
+
+DOWNLOAD_CMD=""
+API_CMD=""
+HEAD_CMD=""
+if command -v curl >/dev/null 2>&1; then
+    DOWNLOAD_CMD="curl -sfLo"
+    API_CMD="curl -s"
+    HEAD_CMD="curl -sfLI"
+elif command -v wget >/dev/null 2>&1; then
+    DOWNLOAD_CMD="wget -q -O"
+    API_CMD="wget -qO-"
+    HEAD_CMD="wget --spider --max-redirect=20 -q"
+else
+    error "Either curl or wget is required but neither is installed"
 fi
 
 if [ -z "${BIN}" ]; then
@@ -40,50 +54,100 @@ if [ -z "${BIN}" ]; then
 fi
 
 # where to install the binary
-DESTINATION="/usr/local/bin/${BIN}"
+DESTINATION="${BIN_ROOT}/${BIN}"
 # name of the hosted binary
 ARTIFACT_NAME="${BIN}-${OS}-${ARCH}"
 # complete URL where the binary is hosted
-URL="https://github.com/${REPO}/releases/latest/download/${ARTIFACT_NAME}"
+BIN_URL="${RELEASE_URL}/download/${ARTIFACT_NAME}"
+# API URL to fetch the digest
+API_URL="https://api.github.com/repos/${REPO}/releases/latest"
 
 echo "Starting installation of ${BIN}"
 
-echo "> Downloading binary ${ARTIFACT_NAME}..."
-if [ -z "$HAS_WGET" ]; then
-  curl -sfLo "${DESTINATION}" "${URL}"
+echo "  Downloading ${ARTIFACT_NAME}..."
+${DOWNLOAD_CMD} "${DESTINATION}" "${BIN_URL}"
+echo "  Downloading ${ARTIFACT_NAME}... OK"
+
+echo "  Verifying integrity..."
+DIGEST=$(${API_CMD} ${API_URL} | \
+    grep -A 50 "\"name\": \"${ARTIFACT_NAME}\"" | \
+    grep '"digest":' | \
+    head -n 1 | \
+    sed 's/.*"digest": "\([^"]*\)".*/\1/'
+)
+
+HASH=""
+if command -v sha256sum >/dev/null 2>&1; then
+  HASH=$(sha256sum "${DESTINATION}" | awk '{print $1}')
+elif command -v shasum >/dev/null 2>&1; then
+  HASH=$(shasum -a 256 "${DESTINATION}" | awk '{print $1}')
 else
-  wget -q -O "${DESTINATION}" "${URL}"
+  error "Neither sha256sum nor shasum found"
 fi
 
-echo "> Setting permissions..."
+if [ "sha256:$HASH" = "$DIGEST" ]; then
+  echo "  Verifying integrity... OK"
+else
+  rm ${DESTINATION}
+  error "Checksum mismatch. Please reach out at https://github.com/${REPO}/issues to get help"
+fi
+
+
+echo "  Setting permissions..."
 chmod u+x "${DESTINATION}"
 chown "$(logname)" "${DESTINATION}"
+echo "  Setting permissions... OK"
 
 # install the manpage in the first section (user commands and tools)
-MAN_ROOT="/usr/local/share/man/man1"
 # consequently expect file name to end with .1
-MAN_ARTIFACT_NAME="${BIN}.1"
-MAN_DESTINATION="${MAN_ROOT}/${MAN_ARTIFACT_NAME}"
+MAN_ARTIFACT_NAME="${BIN}.${MAN_SECTION}"
+MAN_DESTINATION="${MAN_ROOT}/man${MAN_SECTION}/${MAN_ARTIFACT_NAME}"
 # fetch the man from the same place as the binary
-MAN_URL="https://github.com/${REPO}/releases/latest/download/${MAN_ARTIFACT_NAME}"
+MAN_URL="${RELEASE_URL}/download/${MAN_ARTIFACT_NAME}"
 
 NO_MANPAGE=0
-if [ -z "$HAS_WGET" ]; then
-  curl -sfLI "${MAN_URL}" > /dev/null
-  NO_MANPAGE=$?
-else
-  wget --spider --max-redirect=20 -q "${MAN_URL}"
-  NO_MANPAGE=$?
+if ! $HEAD_CMD "${MAN_URL}" > /dev/null; then
+  NO_MANPAGE=1
 fi
 
 if [ "$NO_MANPAGE" -eq 0 ]; then
-  echo "> Downloading man page ${MAN_ARTIFACT_NAME}..."
+  echo "  Downloading man page ${MAN_ARTIFACT_NAME}..."
   mkdir -p "$MAN_ROOT"
-  if [ -z "$HAS_WGET" ]; then
-    curl -sfLo "${MAN_DESTINATION}" "${MAN_URL}"
-  else
-    wget -q -O "${MAN_DESTINATION}" "${MAN_URL}"
+  ${DOWNLOAD_CMD} "${MAN_DESTINATION}" "${MAN_URL}"
+  echo "  Downloading man page ${MAN_ARTIFACT_NAME}... OK"
+fi
+
+echo "  Updating shell configuration..."
+SHELL_CONFIG=""
+PATH_LINE=""
+MANPATH_LINE=""
+
+if [ -f "$HOME/.config/fish/config.fish" ]; then
+  SHELL_CONFIG="$HOME/.config/fish/config.fish"
+  PATH_LINE="fish_add_path -g ${BIN_ROOT}"
+  MANPATH_LINE="set -gx MANPATH ${MAN_ROOT} \$MANPATH"
+elif [ -f "$HOME/.zshrc" ]; then
+  SHELL_CONFIG="$HOME/.zshrc"
+  PATH_LINE="export PATH=\"${BIN_ROOT}:\$PATH\""
+  MANPATH_LINE="export MANPATH=\"${MAN_ROOT}:\$MANPATH\""
+elif [ -f "$HOME/.bashrc" ]; then
+  SHELL_CONFIG="$HOME/.bashrc"
+  PATH_LINE="export PATH=\"${BIN_ROOT}:\$PATH\""
+  MANPATH_LINE="export MANPATH=\"${MAN_ROOT}:\$MANPATH\""
+fi
+
+if [ -n "$SHELL_CONFIG" ]; then
+  if ! grep -q "${BIN_ROOT}" "$SHELL_CONFIG"; then
+    echo "" >> "$SHELL_CONFIG"
+    echo "# Added by ${BIN} installer" >> "$SHELL_CONFIG"
+    echo "$PATH_LINE" >> "$SHELL_CONFIG"
+  fi
+
+  if [ "$NO_MANPAGE" -eq 0 ] && ! grep -q "${MAN_ROOT}" "$SHELL_CONFIG"; then
+    echo "# Added by ${BIN} installer" >> "$SHELL_CONFIG"
+    echo "$MANPATH_LINE" >> "$SHELL_CONFIG"
   fi
 fi
+echo "  Updating shell configuration... OK"
 
 echo "Done!"
