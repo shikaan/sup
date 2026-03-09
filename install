@@ -133,6 +133,14 @@ elif [ -f "$HOME/.bashrc" ]; then
   SHELL_CONFIG="$HOME/.bashrc"
   PATH_LINE="export PATH=\"${BIN_ROOT}:\$PATH\""
   MANPATH_LINE="export MANPATH=\"${MAN_ROOT}:\$MANPATH\""
+elif [ -f "$HOME/.bash_profile" ]; then
+  SHELL_CONFIG="$HOME/.bash_profile"
+  PATH_LINE="export PATH=\"${BIN_ROOT}:\$PATH\""
+  MANPATH_LINE="export MANPATH=\"${MAN_ROOT}:\$MANPATH\""
+elif [ -f "$HOME/.profile" ]; then
+  SHELL_CONFIG="$HOME/.profile"
+  PATH_LINE="export PATH=\"${BIN_ROOT}:\$PATH\""
+  MANPATH_LINE="export MANPATH=\"${MAN_ROOT}:\$MANPATH\""
 fi
 
 if [ -n "$SHELL_CONFIG" ]; then
