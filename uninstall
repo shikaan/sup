@@ -3,9 +3,8 @@
 set -e
 
 error() {
-  echo $1 >&2
-  echo "" >&2
-  echo "Usage: REPO=owner/repo BIN=name $0" >&2
+  printf '%s\n\n' "$1" >&2
+  printf 'Usage: REPO=owner/repo BIN=name %s\n' "$0" >&2
   exit 1
 }
 
