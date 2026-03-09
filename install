@@ -144,13 +144,13 @@ elif [ -f "$HOME/.profile" ]; then
 fi
 
 if [ -n "$SHELL_CONFIG" ]; then
-  if ! grep -q "${BIN_ROOT}" "$SHELL_CONFIG"; then
+  if ! grep -Fq "${BIN_ROOT}" "$SHELL_CONFIG"; then
     echo "" >> "$SHELL_CONFIG"
     echo "# Added by ${BIN} installer" >> "$SHELL_CONFIG"
     echo "$PATH_LINE" >> "$SHELL_CONFIG"
   fi
 
-  if [ "$NO_MANPAGE" -eq 0 ] && ! grep -q "${MAN_ROOT}" "$SHELL_CONFIG"; then
+  if [ "$NO_MANPAGE" -eq 0 ] && ! grep -Fq "${MAN_ROOT}" "$SHELL_CONFIG"; then
     echo "# Added by ${BIN} installer" >> "$SHELL_CONFIG"
     echo "$MANPATH_LINE" >> "$SHELL_CONFIG"
   fi
