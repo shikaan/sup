@@ -28,7 +28,7 @@ MAN_DESTINATION="${MAN_ROOT}/man${MAN_SECTION}/${MAN_ARTIFACT_NAME}"
 DESTINATION="${BIN_ROOT}/${BIN}"
 
 if [ "$(id -u)" -ne 0 ]; then
-  warn "Uninstalling for the current user only. If you want to uninstall for all, run 'sudo $0'."
+  warn "Uninstalling for the current user only. If you want to uninstall for all, run with sudo."
 fi
 
 info "Starting uninstallation of ${BIN}"
