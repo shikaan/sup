@@ -2,6 +2,10 @@
 
 set -e
 
+info () { printf "%s\\n" "$*" ; }
+
+warn () { printf "WARNING: %s\\n" "$*" ; }
+
 error() {
   printf '%s\n\n' "$1" >&2
   printf 'Usage: REPO=owner/repo BIN=name %s\n' "$0" >&2
@@ -24,14 +28,11 @@ MAN_DESTINATION="${MAN_ROOT}/man${MAN_SECTION}/${MAN_ARTIFACT_NAME}"
 DESTINATION="${BIN_ROOT}/${BIN}"
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo ""
-  echo "WARNING: This will only uninstall for the current user."
-  echo "         If you want to run a system-wide uninstallation, run 'sudo $0'."
-  echo ""
+  warn "Uninstalling for the current user only. If you want to uninstall for all, run 'sudo $0'."
 fi
 
-echo "Starting uninstallation of ${BIN}"
-echo "  Removing binaries and manpages..."
+info "Starting uninstallation of ${BIN}"
+info "  Removing binaries and manpages..."
 rm -f "${DESTINATION}"
 rm -f "${MAN_DESTINATION}"
 
@@ -41,6 +42,6 @@ if [ "$(id -u)" -eq 0 ]; then
   rm -f "/usr/local/share/man/man1/${BIN}.1"
 fi
 
-echo "  Removing binaries and manpages... OK"
+info "  Removing binaries and manpages... OK"
 
-echo "Done!"
+info "Done!"

@@ -6,6 +6,10 @@ BIN_ROOT="$HOME/.local/bin"
 MAN_ROOT="$HOME/.local/share/man"
 MAN_SECTION="1"
 
+info () { printf "%s\\n" "$*" ; }
+
+warn () { printf "WARNING: %s\\n" "$*" ; }
+
 error() {
   printf '%s\n\n' "$1" >&2
   printf 'Usage: REPO=owner/repo BIN=name %s\n' "$0" >&2
@@ -61,41 +65,44 @@ BIN_URL="${RELEASE_URL}/download/${ARTIFACT_NAME}"
 # API URL to fetch the digest
 API_URL="https://api.github.com/repos/${REPO}/releases/latest"
 
-echo "Starting installation of ${BIN}"
+info "Starting installation of ${BIN}"
 
-echo "  Downloading ${ARTIFACT_NAME}..."
+info "  Downloading ${ARTIFACT_NAME}..."
 mkdir -p "$(dirname "${BIN_DESTINATION}")"
 ${DOWNLOAD_CMD} "${BIN_DESTINATION}" "${BIN_URL}"
-echo "  Downloading ${ARTIFACT_NAME}... OK"
+info "  Downloading ${ARTIFACT_NAME}... OK"
 
-echo "  Verifying integrity..."
 DIGEST=$(${API_CMD} ${API_URL} | \
     grep -A 50 "\"name\": \"${ARTIFACT_NAME}\"" | \
     grep '"digest":' | \
     head -n 1 | \
-    sed 's/.*"digest": "\([^"]*\)".*/\1/'
+    sed 's/.*"digest": \([^,]*\).*/\1/'
 )
 
-HASH=""
-if command -v sha256sum >/dev/null 2>&1; then
-  HASH=$(sha256sum "${BIN_DESTINATION}" | awk '{print $1}')
-elif command -v shasum >/dev/null 2>&1; then
-  HASH=$(shasum -a 256 "${BIN_DESTINATION}" | awk '{print $1}')
+if [ "$DIGEST" = "null" ]; then
+  warn "This package does have a digest. Cannot perform integrity check."
 else
-  error "Neither sha256sum nor shasum found"
+  info "  Verifying integrity..."
+  HASH=""
+  if command -v sha256sum >/dev/null 2>&1; then
+    HASH=$(sha256sum "${BIN_DESTINATION}" | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    HASH=$(shasum -a 256 "${BIN_DESTINATION}" | awk '{print $1}')
+  else
+    error "Neither sha256sum nor shasum found"
+  fi
+  
+  if [ "\"sha256:$HASH\"" = "$DIGEST" ]; then
+    info "  Verifying integrity... OK"
+  else
+    rm -f -- "${BIN_DESTINATION}"
+    error "Checksum mismatch. Please reach out at https://github.com/${REPO}/issues to get help"
+  fi
 fi
 
-if [ "sha256:$HASH" = "$DIGEST" ]; then
-  echo "  Verifying integrity... OK"
-else
-  rm -f -- "${BIN_DESTINATION}"
-  error "Checksum mismatch. Please reach out at https://github.com/${REPO}/issues to get help"
-fi
-
-
-echo "  Setting permissions..."
+info "  Setting permissions..."
 chmod u+x "${BIN_DESTINATION}"
-echo "  Setting permissions... OK"
+info "  Setting permissions... OK"
 
 # install the manpage in the first section (user commands and tools)
 # consequently expect file name to end with .1
@@ -110,13 +117,13 @@ if ! $HEAD_CMD "${MAN_URL}" > /dev/null; then
 fi
 
 if [ "$NO_MANPAGE" -eq 0 ]; then
-  echo "  Downloading man page ${MAN_ARTIFACT_NAME}..."
+  info "  Downloading man page ${MAN_ARTIFACT_NAME}..."
   mkdir -p "$(dirname "${MAN_DESTINATION}")"
   ${DOWNLOAD_CMD} "${MAN_DESTINATION}" "${MAN_URL}"
-  echo "  Downloading man page ${MAN_ARTIFACT_NAME}... OK"
+  info "  Downloading man page ${MAN_ARTIFACT_NAME}... OK"
 fi
 
-echo "  Updating shell configuration..."
+info "  Updating shell configuration..."
 SHELL_CONFIG=""
 PATH_LINE=""
 MANPATH_LINE=""
@@ -145,16 +152,13 @@ fi
 
 if [ -n "$SHELL_CONFIG" ]; then
   if ! grep -Fq "${BIN_ROOT}" "$SHELL_CONFIG"; then
-    echo "" >> "$SHELL_CONFIG"
-    echo "# Added by ${BIN} installer" >> "$SHELL_CONFIG"
-    echo "$PATH_LINE" >> "$SHELL_CONFIG"
+    printf "\n# Added by ${BIN} installer\n$PATH_LINE" >> "$SHELL_CONFIG"
   fi
 
   if [ "$NO_MANPAGE" -eq 0 ] && ! grep -Fq "${MAN_ROOT}" "$SHELL_CONFIG"; then
-    echo "# Added by ${BIN} installer" >> "$SHELL_CONFIG"
-    echo "$MANPATH_LINE" >> "$SHELL_CONFIG"
+    printf "\n# Added by ${BIN} installer\n$MANPATH_LINE" >> "$SHELL_CONFIG"
   fi
 fi
-echo "  Updating shell configuration... OK"
+info "  Updating shell configuration... OK"
 
-echo "Done!"
+info "Done!"
