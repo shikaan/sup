@@ -47,7 +47,7 @@ if command -v curl >/dev/null 2>&1; then
 elif command -v wget >/dev/null 2>&1; then
     DOWNLOAD_CMD="wget -q -O"
     API_CMD="wget -qO-"
-    HEAD_CMD="wget --spider --max-redirect=20 -q"
+    HEAD_CMD="wget --spider -q"
 else
     error "Either curl or wget is required but neither is installed"
 fi
@@ -112,7 +112,7 @@ MAN_DESTINATION="${MAN_ROOT}/man${MAN_SECTION}/${MAN_ARTIFACT_NAME}"
 MAN_URL="${RELEASE_URL}/download/${MAN_ARTIFACT_NAME}"
 
 NO_MANPAGE=0
-if ! $HEAD_CMD "${MAN_URL}" > /dev/null; then
+if ! $HEAD_CMD "${MAN_URL}" > /dev/null 2>&1; then
   NO_MANPAGE=1
 fi
 

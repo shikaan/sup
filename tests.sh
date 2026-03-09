@@ -6,6 +6,9 @@ output="stdout"
 total=0
 failed=0
 
+SUDO=
+[ "$(id -u)" -ne 0 ] && SUDO=sudo
+
 spec() {
   local fn="$1"
 
@@ -38,14 +41,14 @@ test_backward_compatibility_nochecksum_uninstall() {
 }
 
 test_backward_compatibility_withsudo_install() {
-  sudo sh -c "cat ./install | REPO=shikaan/shmux sh -"
+  $SUDO sh -c "cat ./install | REPO=shikaan/shmux sh -"
   [ -f "$HOME/.local/bin/shmux" ]
 }
 
 test_backward_compatibility_withsudo_uninstall() {
   # simulate package present in old location
-  sudo cp "$HOME/.local/bin/shmux" "/usr/local/bin/shmux" 
-  sudo sh -c "cat ./uninstall | REPO=shikaan/shmux sh -"
+  $SUDO cp "$HOME/.local/bin/shmux" "/usr/local/bin/shmux" 
+  $SUDO sh -c "cat ./uninstall | REPO=shikaan/shmux sh -"
   [ ! -f "$HOME/.local/bin/shmux" ]
   [ ! -f "/usr/local/bin/shmux" ]
 }
