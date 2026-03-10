@@ -14,12 +14,12 @@ spec() {
 
   printf '%s\n' "$fn..."
   total=$((total + 1))
-  printf "\x1b[2m"
+  printf "\033[2m"
   if "$fn"; then
-    printf "\x1b[22m"
+    printf "\033[22m"
     printf '%s\n' "$fn... OK"
   else
-    printf "\x1b[22m"
+    printf "\033[22m"
     printf '%s\n' "$fn... FAIL"
     failed=$((failed + 1))
   fi
@@ -49,7 +49,7 @@ test_backward_compatibility_nochecksum_install() {
 }
 
 test_backward_compatibility_nochecksum_warning() {
-  REPO=shikaan/shmux sh - < ./install > $output
+  REPO=shikaan/shmux sh - < ./install > "$output"
   [ "$(grep -c "WARNING" $output)" -eq "1" ]
 }
 
@@ -78,7 +78,7 @@ test_withchecksum_nomanpage() {
 }
 
 test_withchecksum_nomanpage_nowarning() {
-  REPO=shikaan/keydex sh - < ./install > $output
+  REPO=shikaan/keydex sh - < ./install > "$output"
   [ "$(grep -c "WARNING" $output)" -eq "0" ]
 }
 
@@ -105,6 +105,6 @@ for s in $specs; do
   spec "$s"
 done
 
-rm -f $output
+rm -f "$output"
 printf 'Total: %s, Failed: %s\n' "$total" "$failed"
 exit $failed
