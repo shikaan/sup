@@ -1,38 +1,69 @@
 #!/usr/bin/env sh
 
-get_architecture () {
-  arch="$(uname -m)"
+set -e
 
-  if [ "$arch" = "x86_64" ]; then
-    echo "amd64"
-  else
-    echo "$arch"
+BIN_ROOT="$HOME/.local/bin"
+MAN_ROOT="$HOME/.local/share/man"
+MAN_SECTION="1"
+
+info () { printf "%s\\n" "$*" ; }
+
+warn () { printf "WARNING: %s\\n" "$*" ; }
+
+error() {
+  printf '%s\n\n' "$1" >&2
+  printf 'Usage: REPO=owner/repo BIN=name %s\n' "$0" >&2
+  exit 1
+}
+
+update_shell_config() {
+  shell_config="$1"
+  path_line="$2"
+  manpath_line="$3"
+
+  if ! grep -Fq "${BIN_ROOT}" "$shell_config"; then
+    printf "\n# Added by %s installer\n%s\n" "${BIN}" "${path_line}" >> "$shell_config"
+  fi
+
+  if [ "$NO_MANPAGE" -eq 0 ] && ! grep -Fq "${MAN_ROOT}" "$shell_config"; then
+    printf "\n# Added by %s installer\n%s\n" "${BIN}" "${manpath_line}" >> "$shell_config"
   fi
 }
 
-get_os () {
-  uname | tr '[:upper:]' '[:lower:]'
-}
-
-print_usage () {
-  echo ""
-  echo "Usage: sudo REPO=org/repo BIN=name $0"
-}
-
-OS=$(get_os)
-ARCH=$(get_architecture)
-HAS_WGET=$(which wget)
-
-if [ "$(id -u)" -ne 0 ]; then
-  echo "Installation needs to be run as super user."
-  print_usage
-  exit 1
+if [ -z "${REPO}" ]; then
+  error "REPO should be in the form of 'owner/repo'."
 fi
 
-if [ -z "${REPO}" ]; then
-  echo "REPO should be in the form of 'organization/repo', got '${REPO}'."
-  print_usage
-  exit 1
+RELEASE_URL="https://github.com/${REPO}/releases/latest"
+
+OS=""
+case "$(uname -s)" in
+    Darwin) OS="darwin" ;;
+    Linux) OS="linux" ;;
+    MINGW*|MSYS*|CYGWIN*) error "Windows is not supported by this script. You can download the .exe at ${RELEASE_URL}.";;
+    *) error "Unsupported operating system: $(uname -s). See ${RELEASE_URL} for supported platforms.";;
+esac
+
+ARCH=""
+case "$(uname -m)" in
+    x86_64|amd64) ARCH="amd64" ;;
+    arm64|aarch64) ARCH="arm64" ;;
+    *) error "Unsupported architecture: $(uname -m). See ${RELEASE_URL} for supported platforms.";;
+esac
+
+DOWNLOAD_CMD=""
+API_CMD=""
+HEAD_CMD=""
+if command -v curl >/dev/null 2>&1; then
+    DOWNLOAD_CMD="curl -sfLo"
+    API_CMD="curl -s"
+    HEAD_CMD="curl -sfLI"
+elif command -v wget >/dev/null 2>&1; then
+    DOWNLOAD_CMD="wget -q -O"
+    API_CMD="wget -qO-"
+    HEAD_CMD="wget --spider -q"
+else
+    error "Either curl or wget is required but neither is installed"
 fi
 
 if [ -z "${BIN}" ]; then
@@ -40,50 +71,111 @@ if [ -z "${BIN}" ]; then
 fi
 
 # where to install the binary
-DESTINATION="/usr/local/bin/${BIN}"
+BIN_DESTINATION="${BIN_ROOT}/${BIN}"
 # name of the hosted binary
 ARTIFACT_NAME="${BIN}-${OS}-${ARCH}"
 # complete URL where the binary is hosted
-URL="https://github.com/${REPO}/releases/latest/download/${ARTIFACT_NAME}"
+BIN_URL="${RELEASE_URL}/download/${ARTIFACT_NAME}"
+# API URL to fetch the digest
+API_URL="https://api.github.com/repos/${REPO}/releases/latest"
 
-echo "Starting installation of ${BIN}"
+info "Starting installation of ${BIN}"
 
-echo "> Downloading binary ${ARTIFACT_NAME}..."
-if [ -z "$HAS_WGET" ]; then
-  curl -sfLo "${DESTINATION}" "${URL}"
+info "  Downloading ${ARTIFACT_NAME}..."
+mkdir -p "$(dirname "${BIN_DESTINATION}")"
+${DOWNLOAD_CMD} "${BIN_DESTINATION}" "${BIN_URL}"
+info "  Downloading ${ARTIFACT_NAME}... OK"
+
+info "  Verifying integrity..."
+API_RESPONSE=$(${API_CMD} ${API_URL}) || {
+  error "Failed to fetch digest from ${API_URL}"
+}
+
+DIGEST=$(echo "${API_RESPONSE}" | \
+    grep -A 100 "\"name\": \"${ARTIFACT_NAME}\"" | \
+    grep '"digest":' | \
+    head -n 1 | \
+    sed 's/.*"digest": \([^,]*\).*/\1/'
+)
+
+if [ "${DIGEST}" = "null" ] || [ -z "${DIGEST}" ]; then
+  warn "This package does not have a digest. Cannot perform integrity check."
 else
-  wget -q -O "${DESTINATION}" "${URL}"
-fi
-
-echo "> Setting permissions..."
-chmod u+x "${DESTINATION}"
-chown "$(logname)" "${DESTINATION}"
-
-# install the manpage in the first section (user commands and tools)
-MAN_ROOT="/usr/local/share/man/man1"
-# consequently expect file name to end with .1
-MAN_ARTIFACT_NAME="${BIN}.1"
-MAN_DESTINATION="${MAN_ROOT}/${MAN_ARTIFACT_NAME}"
-# fetch the man from the same place as the binary
-MAN_URL="https://github.com/${REPO}/releases/latest/download/${MAN_ARTIFACT_NAME}"
-
-NO_MANPAGE=0
-if [ -z "$HAS_WGET" ]; then
-  curl -sfLI "${MAN_URL}" > /dev/null
-  NO_MANPAGE=$?
-else
-  wget --spider --max-redirect=20 -q "${MAN_URL}"
-  NO_MANPAGE=$?
-fi
-
-if [ "$NO_MANPAGE" -eq 0 ]; then
-  echo "> Downloading man page ${MAN_ARTIFACT_NAME}..."
-  mkdir -p "$MAN_ROOT"
-  if [ -z "$HAS_WGET" ]; then
-    curl -sfLo "${MAN_DESTINATION}" "${MAN_URL}"
+  HASH=""
+  if command -v sha256sum >/dev/null 2>&1; then
+    HASH=$(sha256sum "${BIN_DESTINATION}" | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    HASH=$(shasum -a 256 "${BIN_DESTINATION}" | awk '{print $1}')
   else
-    wget -q -O "${MAN_DESTINATION}" "${MAN_URL}"
+    error "Neither sha256sum nor shasum found"
+  fi
+  
+  if [ "\"sha256:$HASH\"" != "$DIGEST" ]; then
+    rm -f -- "${BIN_DESTINATION}"
+    error "Checksum mismatch. Please reach out at https://github.com/${REPO}/issues to get help"
   fi
 fi
 
-echo "Done!"
+info "  Verifying integrity... OK"
+
+info "  Setting permissions..."
+chmod u+x "${BIN_DESTINATION}"
+info "  Setting permissions... OK"
+
+# install the manpage in the first section (user commands and tools)
+# consequently expect file name to end with .1
+MAN_ARTIFACT_NAME="${BIN}.${MAN_SECTION}"
+MAN_DESTINATION="${MAN_ROOT}/man${MAN_SECTION}/${MAN_ARTIFACT_NAME}"
+# fetch the man from the same place as the binary
+MAN_URL="${RELEASE_URL}/download/${MAN_ARTIFACT_NAME}"
+
+NO_MANPAGE=0
+if ! ${HEAD_CMD} "${MAN_URL}" > /dev/null 2>&1; then
+  NO_MANPAGE=1
+fi
+
+if [ "$NO_MANPAGE" -eq 0 ]; then
+  info "  Downloading man page ${MAN_ARTIFACT_NAME}..."
+  mkdir -p "$(dirname "${MAN_DESTINATION}")"
+  ${DOWNLOAD_CMD} "${MAN_DESTINATION}" "${MAN_URL}"
+  info "  Downloading man page ${MAN_ARTIFACT_NAME}... OK"
+fi
+
+info "  Updating shell configuration..."
+if [ -f "$HOME/.config/fish/config.fish" ]; then
+  update_shell_config \
+    "$HOME/.config/fish/config.fish" \
+    "fish_add_path -g ${BIN_ROOT}" \
+    "set -gx MANPATH ${MAN_ROOT} \$MANPATH"
+fi
+
+if [ -f "$HOME/.zshrc" ]; then
+  update_shell_config \
+    "$HOME/.zshrc" \
+    "export PATH=\"${BIN_ROOT}:\$PATH\"" \
+    "export MANPATH=\"${MAN_ROOT}:\$MANPATH\""
+fi
+
+if [ -f "$HOME/.bashrc" ]; then
+  update_shell_config \
+    "$HOME/.bashrc" \
+    "export PATH=\"${BIN_ROOT}:\$PATH\"" \
+    "export MANPATH=\"${MAN_ROOT}:\$MANPATH\""
+fi
+
+if [ -f "$HOME/.bash_profile" ]; then
+    update_shell_config \
+      "$HOME/.bash_profile" \
+      "export PATH=\"${BIN_ROOT}:\$PATH\"" \
+      "export MANPATH=\"${MAN_ROOT}:\$MANPATH\""
+fi
+
+if [ -f "$HOME/.profile" ]; then
+    update_shell_config \
+      "$HOME/.profile" \
+      "export PATH=\"${BIN_ROOT}:\$PATH\"" \
+      "export MANPATH=\"${MAN_ROOT}:\$MANPATH\""
+fi
+info "  Updating shell configuration... OK"
+
+info "Done!"

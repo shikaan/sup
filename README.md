@@ -22,13 +22,13 @@ Optionally, programs can be accompained by a man page, whose naming convention f
 Executing the following command will install latest version of `mybin` (for example, downloading `mybin-linux-amd64`)
 
 ```sh
-sudo sh -c "curl -s https://shikaan.github.io/sup/install | REPO=myuser/mybin sh -"
+curl -s https://shikaan.github.io/sup/install | REPO=owner/repo sh -
 ```
 
 The name of the binary is inferred from the `REPO` variable. You can override it with `BIN`
 
 ```sh
-sudo sh -c "curl -s https://shikaan.github.io/sup/install | REPO=myuser/myrepo BIN=mybin sh -"
+curl -s https://shikaan.github.io/sup/install | REPO=owner/repo BIN=mybin sh -
 ```
 
 ### Uninstall
@@ -36,13 +36,13 @@ sudo sh -c "curl -s https://shikaan.github.io/sup/install | REPO=myuser/myrepo B
 Same as above, but it will uninstall `mybin`
 
 ```sh
-sudo sh -c "curl -s https://shikaan.github.io/sup/uninstall | REPO=myuser/mybin sh -"
+curl -s https://shikaan.github.io/sup/uninstall | REPO=owner/repo sh -
 ```
 
 Or, again, with the `BIN` override
 
 ```sh
-sudo sh -c "curl -s https://shikaan.github.io/sup/uninstall | REPO=myuser/myrepo BIN=mybin sh -"
+curl -s https://shikaan.github.io/sup/uninstall | REPO=owner/repo BIN=mybin sh -
 ```
 
 ## 📝 Example
