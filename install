@@ -72,17 +72,21 @@ mkdir -p "$(dirname "${BIN_DESTINATION}")"
 ${DOWNLOAD_CMD} "${BIN_DESTINATION}" "${BIN_URL}"
 info "  Downloading ${ARTIFACT_NAME}... OK"
 
-DIGEST=$(${API_CMD} ${API_URL} | \
+info "  Verifying integrity..."
+API_RESPONSE=$(${API_CMD} ${API_URL}) || {
+  error "Failed to fetch digest from ${API_URL}"
+}
+
+DIGEST=$(echo "${API_RESPONSE}" | \
     grep -A 50 "\"name\": \"${ARTIFACT_NAME}\"" | \
     grep '"digest":' | \
     head -n 1 | \
     sed 's/.*"digest": \([^,]*\).*/\1/'
 )
 
-if [ "$DIGEST" = "null" ]; then
-  warn "This package does have a digest. Cannot perform integrity check."
+if [ "${DIGEST}" = "null" ] || [ -z "${DIGEST}" ]; then
+  warn "This package does not have a digest. Cannot perform integrity check."
 else
-  info "  Verifying integrity..."
   HASH=""
   if command -v sha256sum >/dev/null 2>&1; then
     HASH=$(sha256sum "${BIN_DESTINATION}" | awk '{print $1}')
@@ -92,13 +96,13 @@ else
     error "Neither sha256sum nor shasum found"
   fi
   
-  if [ "\"sha256:$HASH\"" = "$DIGEST" ]; then
-    info "  Verifying integrity... OK"
-  else
+  if [ "\"sha256:$HASH\"" != "$DIGEST" ]; then
     rm -f -- "${BIN_DESTINATION}"
     error "Checksum mismatch. Please reach out at https://github.com/${REPO}/issues to get help"
   fi
 fi
+
+info "  Verifying integrity... OK"
 
 info "  Setting permissions..."
 chmod u+x "${BIN_DESTINATION}"
@@ -152,11 +156,11 @@ fi
 
 if [ -n "$SHELL_CONFIG" ]; then
   if ! grep -Fq "${BIN_ROOT}" "$SHELL_CONFIG"; then
-    printf "\n# Added by ${BIN} installer\n$PATH_LINE" >> "$SHELL_CONFIG"
+    printf "\n# Added by %s installer\n%s\n" "${BIN}" "${PATH_LINE}" >> "$SHELL_CONFIG"
   fi
 
   if [ "$NO_MANPAGE" -eq 0 ] && ! grep -Fq "${MAN_ROOT}" "$SHELL_CONFIG"; then
-    printf "\n# Added by ${BIN} installer\n$MANPATH_LINE" >> "$SHELL_CONFIG"
+    printf "\n# Added by %s installer\n%s\n" "${BIN}" "${MANPATH_LINE}" >> "$SHELL_CONFIG"
   fi
 fi
 info "  Updating shell configuration... OK"

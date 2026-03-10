@@ -1,7 +1,5 @@
 #!/usr/bin/env sh
 
-set -e
-
 info () { printf "%s\\n" "$*" ; }
 
 warn () { printf "WARNING: %s\\n" "$*" ; }
@@ -13,7 +11,7 @@ error() {
 }
 
 if [ -z "${REPO}" ]; then
-  error "REPO should be in the form of 'organization/repo', got '${REPO}'."
+  error "REPO should be in the form of 'owner/repo', got '${REPO}'."
 fi
 
 if [ -z "${BIN}" ]; then
