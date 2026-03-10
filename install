@@ -176,16 +176,6 @@ if [ -f "$HOME/.profile" ]; then
       "export PATH=\"${BIN_ROOT}:\$PATH\"" \
       "export MANPATH=\"${MAN_ROOT}:\$MANPATH\""
 fi
-
-if [ -n "$SHELL_CONFIG" ]; then
-  if ! grep -Fq "${BIN_ROOT}" "$SHELL_CONFIG"; then
-    printf "\n# %s\n%s\n" "${BIN}" "${PATH_LINE}" >> "$SHELL_CONFIG"
-  fi
-
-  if [ "$NO_MANPAGE" -eq 0 ] && ! grep -Fq "${MAN_ROOT}" "$SHELL_CONFIG"; then
-    printf "\n# %s\n%s\n" "${BIN}" "${MANPATH_LINE}" >> "$SHELL_CONFIG"
-  fi
-fi
 info "  Updating shell configuration... OK"
 
 info "Done!"
