@@ -6,6 +6,16 @@ output="stdout"
 total=0
 failed=0
 
+if [ -z "${CI}" ]; then
+  printf 'WARNING: This will modify files in %s and your shell configuration.\n' "$HOME"
+  printf 'Do you want to continue? [y/N] '
+  read -r answer
+  case "$answer" in
+    y|Y) ;;
+    *) printf 'Aborted.\n'; exit 0 ;;
+  esac
+fi
+
 SUDO=
 [ "$(id -u)" -ne 0 ] && SUDO="sudo -E"
 
