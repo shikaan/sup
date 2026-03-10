@@ -102,7 +102,7 @@ test_withchecksum_manpage() {
   REPO=shikaan/lifp sh - < ./install
   [ -f "$HOME/.local/bin/lifp" ] && \
     [ -f "$HOME/.local/share/man/man1/lifp.1" ] && \
-    has_valid_config ".bashrc" "1"
+    has_valid_config ".bashrc" true
 }
 
 test_withchecksum_manpage_uninstall() {

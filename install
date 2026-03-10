@@ -92,7 +92,7 @@ API_RESPONSE=$(${API_CMD} ${API_URL}) || {
 }
 
 DIGEST=$(echo "${API_RESPONSE}" | \
-    grep -A 50 "\"name\": \"${ARTIFACT_NAME}\"" | \
+    grep -A 100 "\"name\": \"${ARTIFACT_NAME}\"" | \
     grep '"digest":' | \
     head -n 1 | \
     sed 's/.*"digest": \([^,]*\).*/\1/'
