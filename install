@@ -109,7 +109,7 @@ else
   else
     error "Neither sha256sum nor shasum found"
   fi
-  
+
   if [ "\"sha256:${HASH}\"" != "${DIGEST}" ]; then
     rm -f -- "${BIN_DESTINATION}"
     error "Checksum mismatch. Please reach out at https://github.com/${REPO}/issues to get help"
@@ -146,9 +146,34 @@ if [ "${HAS_MANPAGE}" -eq 1 ]; then
   case "${MAN_URL}" in
     *.tar)
       TEMPMAN=$(mktemp)
+      TEMPMANDIR=$(mktemp -d)
+      TEMPMANLIST=$(mktemp)
       ${DOWNLOAD_CMD} "${TEMPMAN}" "${MAN_URL}"
-      tar xf "${TEMPMAN}" -C "$(dirname "${MAN_DESTINATION}")"
-      rm -f "${TEMPMAN}"
+      tar tf "${TEMPMAN}" > "${TEMPMANLIST}"
+
+      while IFS= read -r entry; do
+        case "${entry}" in
+          "${BIN}"*.1)
+            case "${entry}" in
+              ''|/*|*/*|*..*|-*)
+                warn "Ignoring unexpected man page entry '${entry}' in ${MAN_URL}"
+                ;;
+              *)
+                tar xf "${TEMPMAN}" -C "${TEMPMANDIR}" "${entry}"
+                if [ -f "${TEMPMANDIR}/${entry}" ]; then
+                  chmod 0644 "${TEMPMANDIR}/${entry}"
+                  mv "${TEMPMANDIR}/${entry}" "$(dirname "${MAN_DESTINATION}")/${entry}"
+                else
+                  warn "Could not install man page '${entry}' from ${MAN_URL}"
+                fi
+                ;;
+            esac
+            ;;
+        esac
+      done < "${TEMPMANLIST}"
+
+      rm -f "${TEMPMAN}" "${TEMPMANLIST}"
+      rm -rf "${TEMPMANDIR}"
       ;;
     *)
       ${DOWNLOAD_CMD} "${MAN_DESTINATION}" "${MAN_URL}"
