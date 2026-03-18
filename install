@@ -122,11 +122,8 @@ info "  Setting permissions..."
 chmod u+x "${BIN_DESTINATION}"
 info "  Setting permissions... OK"
 
-# install the manpage in the first section (user commands and tools)
-# consequently expect file name to end with .1
 MAN_ARTIFACT_NAME="${BIN}.${MAN_SECTION}"
 MAN_DESTINATION="${MAN_ROOT}/man${MAN_SECTION}/${MAN_ARTIFACT_NAME}"
-# fetch the man from the same place as the binary
 MAN_BASE_URL="${RELEASE_URL}/download/${MAN_ARTIFACT_NAME}"
 
 HAS_MANPAGE=0
@@ -160,7 +157,9 @@ if [ "${HAS_MANPAGE}" -eq 1 ]; then
                 ;;
               *)
                 tar xf "${TEMPMAN}" -C "${TEMPMANDIR}" "${entry}"
-                if [ -f "${TEMPMANDIR}/${entry}" ]; then
+                if [ -L "${TEMPMANDIR}/${entry}" ]; then
+                  warn "Ignoring symlink man page entry '${entry}' in ${MAN_URL}"
+                elif [ -f "${TEMPMANDIR}/${entry}" ]; then
                   chmod 0644 "${TEMPMANDIR}/${entry}"
                   mv "${TEMPMANDIR}/${entry}" "$(dirname "${MAN_DESTINATION}")/${entry}"
                 else
