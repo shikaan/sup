@@ -18,8 +18,8 @@ if [ -z "${BIN}" ]; then
   BIN=$(basename "${REPO}")
 fi
 
-BIN_ROOT="$HOME/.local/bin"
-MAN_ROOT="$HOME/.local/share/man"
+BIN_ROOT="${HOME}/.local/bin"
+MAN_ROOT="${HOME}/.local/share/man"
 MAN_SECTION="1"
 MAN_ARTIFACT_NAME="${BIN}.${MAN_SECTION}"
 MAN_DESTINATION="${MAN_ROOT}/man${MAN_SECTION}/${MAN_ARTIFACT_NAME}"

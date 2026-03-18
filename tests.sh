@@ -105,6 +105,14 @@ test_withchecksum_manpage() {
     has_valid_config ".bashrc" true
 }
 
+test_withchecksum_manpage_archive() {
+  config_init ".bashrc"
+  REPO=shikaan/keydex sh - < ./install
+  [ -f "$HOME/.local/bin/keydex" ] && \
+    [ $(ls ~/.local/share/man/man1/keydex* | wc -l) -eq 5 ] && \
+    has_valid_config ".bashrc" true
+}
+
 test_withchecksum_manpage_uninstall() {
   REPO=shikaan/lifp sh - < ./uninstall
   [ ! -f "$HOME/.local/bin/lifp" ] && [ ! -f "$HOME/.local/share/man/man1/lifp.1" ]
